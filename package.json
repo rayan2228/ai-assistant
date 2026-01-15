@@ -1,0 +1,29 @@
+{
+  "name": "my-ai-assistant",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun --env-file .env --watch index.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@langchain/core": "^1.1.13",
+    "@langchain/groq": "^1.0.3",
+    "@langchain/langgraph": "^1.0.15",
+    "@langchain/tavily": "^1.2.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
+    "googleapis": "^170.0.0",
+    "helmet": "^8.1.0",
+    "langchain": "^1.2.8",
+    "zod": "^4.3.5"
+  }
+}

@@ -1,7 +1,8 @@
-import { google } from "googleapis";
 import crypto from "crypto";
+import { google } from "googleapis";
+import jwt from "jsonwebtoken";
 import { config } from "../config";
-
+import { User } from "../models/user.model";
 const createOAuthClient = () =>
   new google.auth.OAuth2(
     config.GOOGLE_CLIENT_ID,
@@ -24,11 +25,40 @@ export const googleCallBackService = async (code: string) => {
   const oauth2Client = createOAuthClient();
 
   const { tokens } = await oauth2Client.getToken(code);
+  oauth2Client.setCredentials(tokens);
 
-  // Save refresh token ONCE
-  if (tokens.refresh_token) {
-    // store in DB
+  // Get Google profile info ONCE
+  const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
+
+  const { data } = await oauth2.userinfo.get();
+
+  // Find or create user
+  let user = await User.findOne({ googleId: data.id });
+
+  if (!user) {
+    user = await User.create({
+      googleId: data.id,
+      email: data.email,
+      name: data.name,
+      avatar: data.picture,
+    });
   }
 
-  return tokens;
+  // Save refresh token once
+  if (tokens.refresh_token) {
+    user.googleRefreshToken = tokens.refresh_token;
+    await user.save();
+  }
+
+  // Issue YOUR token
+  const appToken = jwt.sign(
+    { userId: user.id, email: user.email, googleId: user.googleId },
+    config.JWT_SECRET!,
+    { expiresIn: "7d" }
+  );
+
+  return {
+    token: appToken,
+    user: data,
+  };
 };

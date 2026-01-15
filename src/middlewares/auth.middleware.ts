@@ -2,11 +2,8 @@ import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { config } from "./../config/index";
 
-interface ExtendedRequest extends Request {
-  user: any;
-}
 export const authMiddleware = (
-  req: ExtendedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
@@ -23,7 +20,10 @@ export const authMiddleware = (
   }
 
   try {
-    const decoded = jwt.verify(token, config.JWT_SECRET!);
+    const decoded = jwt.verify(token, config.JWT_SECRET!) as {
+      userId: string;
+      email: string;
+    };
     req.user = decoded;
     next();
   } catch {

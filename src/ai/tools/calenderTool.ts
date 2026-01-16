@@ -7,12 +7,6 @@ const calender = google.calendar({
   version: "v3",
   auth: oauth2Client,
 });
-oauth2Client.setCredentials({
-  access_token:
-    "ya29.a0AUMWg_L1em2HpoT9sxgoXpBM-3UpGTv7OxouzNAwmlLRvOttwUHNDxLZSHiY7P5Qkpi4M-Vvxwbr_du76EVvRgjf_U6yVZfaunlokEcFhLtlYdvAGayh5FvaFYLJOiHZSBNWFdH8W2aFUU1CN3w8ULqlM_vd4eRL9LPE75a7DvkrI_wTPkMSpFPRuFAFpdCNau78kGwaCgYKAXISARYSFQHGX2Miayst0ZAVlHJZiP8wGHg9DQ0206",
-  refresh_token:
-    "1//0ghrYuXdYVCzECgYIARAAGBASNwF-L9IrchL8vKJOWEh6W5jLwYmGRsj7JYyMz3JbB5moxlA4cDEvQ9EfYOJFZxToxtL_9sg8kuM",
-});
 export const getCalenderEvents = tool(
   async ({ q, timeMin, timeMax }) => {
     try {

@@ -47,7 +47,7 @@ async function callAssistant() {
         },
       ],
     },
-    { recursionLimit: 5 }
+    { recursionLimit: 5, configurable: { thread_id: crypto.randomUUID() } }
   );
   console.log(
     "ai message",

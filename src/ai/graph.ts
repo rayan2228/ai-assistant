@@ -1,9 +1,14 @@
-import { END, MessagesAnnotation, StateGraph } from "@langchain/langgraph";
+import {
+  END,
+  MemorySaver,
+  MessagesAnnotation,
+  StateGraph,
+} from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import type { AIMessage } from "langchain";
 import { assistant } from "./assistant";
 import { tools } from "./tools";
-
+const checkpointer = new MemorySaver();
 async function callAssistant(state: typeof MessagesAnnotation.State) {
   const responses = await assistant.invoke(state.messages);
   return {
@@ -30,4 +35,4 @@ export const app = new StateGraph(MessagesAnnotation)
     __end__: END,
     tools: "tools",
   })
-  .compile();
+  .compile({ checkpointer });

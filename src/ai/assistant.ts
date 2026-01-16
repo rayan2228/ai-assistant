@@ -43,7 +43,7 @@ async function callAssistant() {
         },
         {
           role: "user",
-          content: "do i have any meeting tomorrow?",
+          content: "create a meting with taufik<taufik.cit.bd@gmail.com> for tomorrow at 2pm for 2 hours. meeting agenda ai talk",
         },
       ],
     },

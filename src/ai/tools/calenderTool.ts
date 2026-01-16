@@ -2,17 +2,17 @@ import { google } from "googleapis";
 import { tool } from "langchain";
 import * as z from "zod";
 import { oauth2Client } from "../../services/auth.service";
+
+const calender = google.calendar({
+  version: "v3",
+  auth: oauth2Client,
+});
 oauth2Client.setCredentials({
   access_token:
     "ya29.a0AUMWg_L1em2HpoT9sxgoXpBM-3UpGTv7OxouzNAwmlLRvOttwUHNDxLZSHiY7P5Qkpi4M-Vvxwbr_du76EVvRgjf_U6yVZfaunlokEcFhLtlYdvAGayh5FvaFYLJOiHZSBNWFdH8W2aFUU1CN3w8ULqlM_vd4eRL9LPE75a7DvkrI_wTPkMSpFPRuFAFpdCNau78kGwaCgYKAXISARYSFQHGX2Miayst0ZAVlHJZiP8wGHg9DQ0206",
   refresh_token:
     "1//0ghrYuXdYVCzECgYIARAAGBASNwF-L9IrchL8vKJOWEh6W5jLwYmGRsj7JYyMz3JbB5moxlA4cDEvQ9EfYOJFZxToxtL_9sg8kuM",
 });
-const calender = google.calendar({
-  version: "v3",
-  auth: oauth2Client,
-});
-
 export const getCalenderEvents = tool(
   async ({ q, timeMin, timeMax }) => {
     try {
@@ -39,7 +39,10 @@ export const getCalenderEvents = tool(
       }));
       return JSON.stringify(result);
     } catch (error) {
-      console.log("error", error);
+      return JSON.stringify({
+        success: false,
+        error: "Failed to get calender events. check you are logged in.",
+      });
     }
   },
   {
@@ -64,27 +67,93 @@ export const getCalenderEvents = tool(
     }),
   }
 );
+
 export const createCalenderEvents = tool(
-  async ({ query }) => {
-    const response = await calender.events.insert({
-      requestBody: {
-        summary: "test summary",
-        description: "test description",
-        start: {
-          dateTime: new Date().toISOString(),
+  async ({
+    summary,
+    description,
+    start,
+    end,
+    location,
+    attendees,
+  }: {
+    summary: string;
+    description?: string;
+    start: string;
+    end: string;
+    location?: string;
+    attendees?: { email: string }[];
+  }) => {
+    try {
+      const response = await calender.events.insert({
+        calendarId: "primary",
+        conferenceDataVersion: 1,
+        sendUpdates: "all",
+        requestBody: {
+          summary,
+          description,
+          location,
+          start: {
+            dateTime: start,
+          },
+          end: {
+            dateTime: end,
+          },
+          attendees,
+          conferenceData: {
+            createRequest: {
+              requestId: crypto.randomUUID(),
+              conferenceSolutionKey: {
+                type: "hangoutsMeet",
+              },
+            },
+          },
         },
-        end: {
-          dateTime: new Date().toISOString(),
-        },
-      },
-    });
-    return JSON.stringify(response.data);
+      });
+
+      if (response.status === 200) {
+        return "The meeting has been created successfully.";
+      }
+
+      return "Couldn't create the meeting.";
+    } catch (error) {
+      console.error("Create calendar event error:", error);
+      return "Failed to create calendar event. Please check that you are logged in.";
+    }
   },
   {
     name: "createCalenderEvents",
-    description: "create calender events from query",
+    description:
+      "Creates a new event in the logged-in user’s Google Calendar. " +
+      "Use when the user wants to schedule or add a meeting, appointment, or reminder.",
     schema: z.object({
-      query: z.string().describe("query to create calender events"),
+      summary: z.string().describe("Title of the calendar event."),
+      description: z
+        .string()
+        .optional()
+        .describe("Detailed description or agenda of the event."),
+      start: z
+        .string()
+        .describe(
+          "Event start time as an RFC3339 datetime string (e.g. 2026-01-16T15:00:00+06:00)."
+        ),
+      end: z
+        .string()
+        .describe(
+          "Event end time as an RFC3339 datetime string. Must be later than start time."
+        ),
+      location: z
+        .string()
+        .optional()
+        .describe("Physical or virtual location of the event."),
+      attendees: z
+        .array(
+          z.object({
+            email: z.string().describe("Attendee email address"),
+          })
+        )
+        .optional()
+        .describe("List of attendee email addresses."),
     }),
   }
 );

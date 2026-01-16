@@ -5,6 +5,7 @@ const {
   GOOGLE_CLIENT_SECRET,
   GOOGLE_CLIENT_ID,
   JWT_SECRET,
+  MONGODB_URI,
 } = process.env;
 const _config = {
   PORT,
@@ -19,6 +20,7 @@ const _config = {
     "https://www.googleapis.com/auth/userinfo.email",
   ],
   JWT_SECRET,
+  MONGODB_URI,
 };
 
 export const config = Object.freeze(_config);

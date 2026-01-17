@@ -14,7 +14,8 @@ app.use("/api/v1", authRouter);
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
-app.get("/chat", async (req, res) => {
-  const data = await callAssistant();
+app.post("/chat", async (req, res) => {
+  const { userPrompt } = req.body;
+  const data = await callAssistant(userPrompt);
   res.json({ data });
 });

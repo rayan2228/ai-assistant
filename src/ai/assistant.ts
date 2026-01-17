@@ -7,7 +7,9 @@ export const assistant = new ChatGroq({
   temperature: 0,
 }).bindTools(tools);
 
-async function callAssistant() {
+async function callAssistant(userPrompt: string) {
+  const currentDateTime = new Date().toLocaleString("sv-SE").replace(" ", "T");
+  const timeZoneString = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const response = await app.invoke(
     {
       messages: [
@@ -39,19 +41,19 @@ async function callAssistant() {
           Constraints:
           Never invent calendar events, user data, or real-time facts.
           Respect user privacy and security at all times.
-          Your objective is to solve the task efficiently, using tools when needed and direct answers when possible.`,
+          Your objective is to solve the task efficiently, using tools when needed and direct answers when possible.
+          
+          Current datetime: ${currentDateTime}
+          Current timezone string: ${timeZoneString}
+          `,
         },
         {
           role: "user",
-          content: "create a meting with taufik<taufik.cit.bd@gmail.com> for tomorrow at 2pm for 2 hours. meeting agenda ai talk",
+          content: userPrompt,
         },
       ],
     },
     { recursionLimit: 5, configurable: { thread_id: crypto.randomUUID() } }
-  );
-  console.log(
-    "ai message",
-    response.messages[response.messages.length - 1]?.content
   );
   return response.messages[response.messages.length - 1]?.content;
 }

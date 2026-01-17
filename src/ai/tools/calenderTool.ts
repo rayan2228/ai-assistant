@@ -3,14 +3,21 @@ import { tool } from "langchain";
 import * as z from "zod";
 import { oauth2Client } from "../../services/auth.service";
 
-const calender = google.calendar({
+oauth2Client.setCredentials({
+  access_token:
+    "ya29.a0AUMWg_L_1bzh4Ib3voYIb6sbt88vJBecP7HgPYypAHkGWkC-NW7EAgHDHihRhlbMJ4HBj5IgtJ0IKMWsoWuJ35FgpLQi7oGmpZ4sksY-rZ9FK0WAYazhx-JkuSx5bAjZX0kyAiLW03ZNfHLzDzxR5YIBEKeoqUh_ocDFgEDOvX9Kjp1S7UVyfTjkfujBBl0nuezxB4oaCgYKAd4SARYSFQHGX2Mi4b-f5fCSOIzZ254u2RKNiw0206",
+  refresh_token:
+    "1//0gc6OikJ1LJeqCgYIARAAGBASNwF-L9Irq1GYuQcmKQp3YKeI62buoto_0uv1yYnDOiFBv1sMBn8nBL29H4L7ptcemhHfWI-7E5w",
+});
+const calendar = google.calendar({
   version: "v3",
   auth: oauth2Client,
 });
+
 export const getCalenderEvents = tool(
   async ({ q, timeMin, timeMax }) => {
     try {
-      const response = await calender.events.list({
+      const response = await calendar.events.list({
         calendarId: "primary",
         q,
         timeMin,
@@ -62,24 +69,43 @@ export const getCalenderEvents = tool(
   }
 );
 
+const createCalenderEventsSchema = z.object({
+  summary: z.string().describe("Title of the calendar event."),
+  description: z
+    .string()
+    .optional()
+    .describe("Detailed description or agenda of the event."),
+  start: z.object({
+    dateTime: z.string().describe("The date time of start of the event."),
+    timeZone: z.string().describe("User's IANA timezone"),
+  }),
+  end: z.object({
+    dateTime: z.string().describe("The date time of end of the event."),
+    timeZone: z.string().describe("User's IANA timezone"),
+  }),
+  location: z
+    .string()
+    .optional()
+    .describe("Physical or virtual location of the event."),
+  attendees: z
+    .array(
+      z.object({
+        email: z.string().describe("The email of the attendee"),
+        displayName: z.string().describe("Then name of the attendee."),
+      })
+    )
+    .optional()
+    .describe("List of attendee email addresses."),
+});
+type EventData = z.infer<typeof createCalenderEventsSchema>;
 export const createCalenderEvents = tool(
-  async ({
-    summary,
-    description,
-    start,
-    end,
-    location,
-    attendees,
-  }: {
-    summary: string;
-    description?: string;
-    start: string;
-    end: string;
-    location?: string;
-    attendees?: { email: string }[];
-  }) => {
+  async (eventData) => {
+    const { summary, description, start, end, location, attendees } =
+      eventData as EventData;
+    console.log(summary, description, start, end, location, attendees);
+
     try {
-      const response = await calender.events.insert({
+      const response = await calendar.events.insert({
         calendarId: "primary",
         conferenceDataVersion: 1,
         sendUpdates: "all",
@@ -88,10 +114,12 @@ export const createCalenderEvents = tool(
           description,
           location,
           start: {
-            dateTime: start,
+            dateTime: start.dateTime,
+            timeZone: start.timeZone,
           },
           end: {
-            dateTime: end,
+            dateTime: end.dateTime,
+            timeZone: end.timeZone,
           },
           attendees,
           conferenceData: {
@@ -120,34 +148,6 @@ export const createCalenderEvents = tool(
     description:
       "Creates a new event in the logged-in user’s Google Calendar. " +
       "Use when the user wants to schedule or add a meeting, appointment, or reminder.",
-    schema: z.object({
-      summary: z.string().describe("Title of the calendar event."),
-      description: z
-        .string()
-        .optional()
-        .describe("Detailed description or agenda of the event."),
-      start: z
-        .string()
-        .describe(
-          "Event start time as an RFC3339 datetime string (e.g. 2026-01-16T15:00:00+06:00)."
-        ),
-      end: z
-        .string()
-        .describe(
-          "Event end time as an RFC3339 datetime string. Must be later than start time."
-        ),
-      location: z
-        .string()
-        .optional()
-        .describe("Physical or virtual location of the event."),
-      attendees: z
-        .array(
-          z.object({
-            email: z.string().describe("Attendee email address"),
-          })
-        )
-        .optional()
-        .describe("List of attendee email addresses."),
-    }),
+    schema: createCalenderEventsSchema,
   }
 );

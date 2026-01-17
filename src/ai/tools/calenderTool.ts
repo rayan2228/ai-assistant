@@ -1,7 +1,12 @@
 import { google } from "googleapis";
 import { tool } from "langchain";
-import * as z from "zod";
+import type { CreateEventData, GetEventData } from "../../../types/type";
 import { oauth2Client } from "../../services/auth.service";
+import {
+  createCalenderEventsSchema,
+  deleteCalenderEventSchema,
+  getEventValidationSchema,
+} from "../../utils/validationSchema/calendarSchema";
 
 oauth2Client.setCredentials({
   access_token:
@@ -15,7 +20,7 @@ const calendar = google.calendar({
 });
 
 export const getCalenderEvents = tool(
-  async ({ q, timeMin, timeMax }) => {
+  async ({ q, timeMin, timeMax }: GetEventData) => {
     try {
       const response = await calendar.events.list({
         calendarId: "primary",
@@ -49,61 +54,19 @@ export const getCalenderEvents = tool(
   {
     name: "getCalenderEvents",
     description: "get calender events",
-    schema: z.object({
-      q: z
-        .string()
-        .describe(
-          "A free-text search term used to filter events. This search matches across several fields such as event summary, description, location, organizer, and attendee names/emails. If provided, only events containing the query text in these fields will be returned."
-        ),
-      timeMin: z
-        .string()
-        .describe(
-          "An RFC3339 timestamp representing the lower bound of the event’s end time. Only events that end after this time will be included. Must include timezone offset (e.g., 2026-01-16T00:00:00Z). If not provided, no lower time limit is applied."
-        ),
-      timeMax: z
-        .string()
-        .describe(
-          "An RFC3339 timestamp for the upper bound of the event’s start time. Only events that start before this time will be included. Must include timezone offset. If not provided, no upper time limit is applied. If both timeMin and timeMax are used, timeMax must be later than timeMin."
-        ),
-    }),
+    schema: getEventValidationSchema,
   }
 );
 
-const createCalenderEventsSchema = z.object({
-  summary: z.string().describe("Title of the calendar event."),
-  description: z
-    .string()
-    .optional()
-    .describe("Detailed description or agenda of the event."),
-  start: z.object({
-    dateTime: z.string().describe("The date time of start of the event."),
-    timeZone: z.string().describe("User's IANA timezone"),
-  }),
-  end: z.object({
-    dateTime: z.string().describe("The date time of end of the event."),
-    timeZone: z.string().describe("User's IANA timezone"),
-  }),
-  location: z
-    .string()
-    .optional()
-    .describe("Physical or virtual location of the event."),
-  attendees: z
-    .array(
-      z.object({
-        email: z.string().describe("The email of the attendee"),
-        displayName: z.string().describe("Then name of the attendee."),
-      })
-    )
-    .optional()
-    .describe("List of attendee email addresses."),
-});
-type EventData = z.infer<typeof createCalenderEventsSchema>;
 export const createCalenderEvents = tool(
-  async (eventData) => {
-    const { summary, description, start, end, location, attendees } =
-      eventData as EventData;
-    console.log(summary, description, start, end, location, attendees);
-
+  async ({
+    summary,
+    description,
+    start,
+    end,
+    location,
+    attendees,
+  }: CreateEventData) => {
     try {
       const response = await calendar.events.insert({
         calendarId: "primary",
@@ -132,15 +95,18 @@ export const createCalenderEvents = tool(
           },
         },
       });
-
+      console.log(response);
       if (response.status === 200) {
         return "The meeting has been created successfully.";
       }
 
       return "Couldn't create the meeting.";
     } catch (error) {
-      console.error("Create calendar event error:", error);
-      return "Failed to create calendar event. Please check that you are logged in.";
+      return JSON.stringify({
+        success: false,
+        error:
+          "Failed to create calendar event. Please check that you are logged in.",
+      });
     }
   },
   {
@@ -149,5 +115,33 @@ export const createCalenderEvents = tool(
       "Creates a new event in the logged-in user’s Google Calendar. " +
       "Use when the user wants to schedule or add a meeting, appointment, or reminder.",
     schema: createCalenderEventsSchema,
+  }
+);
+
+export const deleteCalenderEvent = tool(
+  async ({ eventId }: { eventId: string }) => {
+    try {
+      const response = await calendar.events.delete({
+        calendarId: "primary",
+        eventId,
+      });
+      if (response.status === 204) {
+        return "The meeting has been deleted successfully.";
+      }
+      return "Couldn't delete the meeting.";
+    } catch (error) {
+      return JSON.stringify({
+        success: false,
+        error:
+          "Failed to delete calendar event. Please check that you are logged in.",
+      });
+    }
+  },
+  {
+    name: "deleteCalenderEvent",
+    description:
+      "Deletes an event from the logged-in user’s Google Calendar. " +
+      "Use when the user wants to cancel a meeting, appointment, or reminder.",
+    schema: deleteCalenderEventSchema,
   }
 );

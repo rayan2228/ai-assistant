@@ -95,7 +95,6 @@ export const createCalenderEvents = tool(
           },
         },
       });
-      console.log(response);
       if (response.status === 200) {
         return "The meeting has been created successfully.";
       }

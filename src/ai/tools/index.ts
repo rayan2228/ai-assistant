@@ -1,13 +1,15 @@
 import {
-  createCalenderEvents,
-  deleteCalenderEvent,
-  getCalenderEvents,
+  createCalendarEvents,
+  deleteCalendarEvent,
+  getCalendarEvents,
+  updateCalendarEvent,
 } from "./calenderTool";
 import { webSearch } from "./webSearch";
 
 export const tools = [
-  createCalenderEvents,
-  getCalenderEvents,
+  createCalendarEvents,
+  getCalendarEvents,
   webSearch,
-  deleteCalenderEvent,
+  deleteCalendarEvent,
+  updateCalendarEvent,
 ];

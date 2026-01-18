@@ -53,7 +53,7 @@ async function callAssistant(userPrompt: string) {
         },
       ],
     },
-    { recursionLimit: 5, configurable: { thread_id: crypto.randomUUID() } }
+    { recursionLimit: 10, configurable: { thread_id: crypto.randomUUID() } },
   );
   return response.messages[response.messages.length - 1]?.content;
 }

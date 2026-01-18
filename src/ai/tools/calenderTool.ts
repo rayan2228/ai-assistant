@@ -1,11 +1,16 @@
 import { google } from "googleapis";
 import { tool } from "langchain";
-import type { CreateEventData, GetEventData } from "../../../types/type";
+import type {
+  CreateEventData,
+  GetEventData,
+  UpdateEventData,
+} from "../../../types/type";
 import { oauth2Client } from "../../services/auth.service";
 import {
-  createCalenderEventsSchema,
-  deleteCalenderEventSchema,
+  createCalendarEventsSchema,
+  deleteCalendarEventSchema,
   getEventValidationSchema,
+  updateCalendarEventsSchema,
 } from "../../utils/validationSchema/calendarSchema";
 
 oauth2Client.setCredentials({
@@ -19,7 +24,7 @@ const calendar = google.calendar({
   auth: oauth2Client,
 });
 
-export const getCalenderEvents = tool(
+export const getCalendarEvents = tool(
   async ({ q, timeMin, timeMax }: GetEventData) => {
     try {
       const response = await calendar.events.list({
@@ -43,7 +48,10 @@ export const getCalenderEvents = tool(
         reminders: event.reminders,
         eventType: event.eventType,
       }));
-      return JSON.stringify(result);
+      return JSON.stringify({
+        success: true,
+        events: result,
+      });
     } catch (error) {
       return JSON.stringify({
         success: false,
@@ -52,13 +60,15 @@ export const getCalenderEvents = tool(
     }
   },
   {
-    name: "getCalenderEvents",
-    description: "get calender events",
+    name: "getCalendarEvents",
+    description:
+      "Retrieves calendar events. Use this ONLY when you need to find an event ID " +
+      "or get event details. Do NOT call this after creating, updating, or deleting events.",
     schema: getEventValidationSchema,
-  }
+  },
 );
 
-export const createCalenderEvents = tool(
+export const createCalendarEvents = tool(
   async ({
     summary,
     description,
@@ -95,8 +105,11 @@ export const createCalenderEvents = tool(
           },
         },
       });
-      if (response.status === 200) {
-        return "The meeting has been created successfully.";
+      if (response.statusText === "OK") {
+        return JSON.stringify({
+          success: true,
+          message: "The meeting has been created successfully.",
+        });
       }
 
       return "Couldn't create the meeting.";
@@ -109,23 +122,91 @@ export const createCalenderEvents = tool(
     }
   },
   {
-    name: "createCalenderEvents",
+    name: "createCalendarEvents",
     description:
       "Creates a new event in the logged-in user’s Google Calendar. " +
       "Use when the user wants to schedule or add a meeting, appointment, or reminder.",
-    schema: createCalenderEventsSchema,
-  }
+    schema: createCalendarEventsSchema,
+  },
 );
 
-export const deleteCalenderEvent = tool(
+export const updateCalendarEvent = tool(
+  async ({
+    eventId,
+    summary,
+    description,
+    start,
+    end,
+    location,
+    attendees,
+  }: UpdateEventData) => {
+    try {
+      const response = await calendar.events.update({
+        calendarId: "primary",
+        eventId,
+        conferenceDataVersion: 1,
+        sendUpdates: "all",
+        requestBody: {
+          summary,
+          description,
+          location,
+          start: {
+            dateTime: start.dateTime,
+            timeZone: start.timeZone,
+          },
+          end: {
+            dateTime: end.dateTime,
+            timeZone: end.timeZone,
+          },
+          attendees,
+          conferenceData: {
+            createRequest: {
+              requestId: crypto.randomUUID(),
+              conferenceSolutionKey: {
+                type: "hangoutsMeet",
+              },
+            },
+          },
+        },
+      });
+      if (response.statusText === "OK") {
+        return JSON.stringify({
+          success: true,
+          message:
+            "After updating, do NOT call getCalendarEvents to verify - just confirm to the user.",
+        });
+      }
+      return "Couldn't update the meeting.";
+    } catch (error) {
+      return JSON.stringify({
+        success: false,
+        error:
+          "Failed to update calendar event. Please check that you are logged in.",
+      });
+    }
+  },
+  {
+    name: "updateCalendarEvent",
+    description:
+      "Updates an existing event in Google Calendar. " +
+      "Use this when the user wants to reschedule or modify a meeting. " +
+      "After updating, do NOT call getCalendarEvents to verify - just confirm to the user.",
+    schema: updateCalendarEventsSchema,
+  },
+);
+
+export const deleteCalendarEvent = tool(
   async ({ eventId }: { eventId: string }) => {
     try {
       const response = await calendar.events.delete({
         calendarId: "primary",
         eventId,
       });
-      if (response.status === 204) {
-        return "The meeting has been deleted successfully.";
+      if (response.statusText === "OK") {
+        return JSON.stringify({
+          success: true,
+          message: "The meeting has been deleted successfully.",
+        });
       }
       return "Couldn't delete the meeting.";
     } catch (error) {
@@ -137,10 +218,10 @@ export const deleteCalenderEvent = tool(
     }
   },
   {
-    name: "deleteCalenderEvent",
+    name: "deleteCalendarEvent",
     description:
       "Deletes an event from the logged-in user’s Google Calendar. " +
       "Use when the user wants to cancel a meeting, appointment, or reminder.",
-    schema: deleteCalenderEventSchema,
-  }
+    schema: deleteCalendarEventSchema,
+  },
 );

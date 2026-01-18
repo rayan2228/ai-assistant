@@ -1,5 +1,4 @@
 import z from "zod";
-import { deleteCalenderEvent } from "./../../ai/tools/calenderTool";
 
 const getEventValidationSchema = z.object({
   q: z
@@ -19,7 +18,36 @@ const getEventValidationSchema = z.object({
     ),
 });
 
-const createCalenderEventsSchema = z.object({
+const createCalendarEventsSchema = z.object({
+  summary: z.string().describe("Title of the calendar event."),
+  description: z
+    .string()
+    .optional()
+    .describe("Detailed description or agenda of the event."),
+  start: z.object({
+    dateTime: z.string().describe("The date time of start of the event."),
+    timeZone: z.string().describe("User's IANA timezone"),
+  }),
+  end: z.object({
+    dateTime: z.string().describe("The date time of end of the event."),
+    timeZone: z.string().describe("User's IANA timezone"),
+  }),
+  location: z
+    .string()
+    .optional()
+    .describe("Physical or virtual location of the event."),
+  attendees: z
+    .array(
+      z.object({
+        email: z.string().describe("The email of the attendee"),
+        displayName: z.string().describe("Then name of the attendee."),
+      })
+    )
+    .optional()
+    .describe("List of attendee email addresses."),
+});
+const updateCalendarEventsSchema = z.object({
+  eventId: z.string().describe("The ID of the event to update."),
   summary: z.string().describe("Title of the calendar event."),
   description: z
     .string()
@@ -48,12 +76,13 @@ const createCalenderEventsSchema = z.object({
     .describe("List of attendee email addresses."),
 });
 
-const deleteCalenderEventSchema = z.object({
+const deleteCalendarEventSchema = z.object({
   eventId: z.string().describe("The ID of the event to delete."),
 });
 
 export {
-  createCalenderEventsSchema,
-  deleteCalenderEventSchema,
+  createCalendarEventsSchema,
+  deleteCalendarEventSchema,
   getEventValidationSchema,
+  updateCalendarEventsSchema,
 };
